@@ -4,7 +4,7 @@ const {
   getBooks, getBookById, addBook, updateBook, deleteBook, getCategoryStats,
 } = require('../controllers/bookController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
-const upload = require('../middleware/uploadMiddleware');
+const { upload } = require('../middleware/uploadMiddleware');
 
 router.get('/categories', protect, adminOnly, getCategoryStats);
 router.get('/', getBooks);

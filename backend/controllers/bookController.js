@@ -1,6 +1,5 @@
 const Book = require('../models/Book');
-const fs = require('fs');
-const path = require('path');
+const { uploadToCloudinary } = require('../middleware/uploadMiddleware');
 
 // @desc   Get all books with search & filter
 // @route  GET /api/books
@@ -28,12 +27,7 @@ const getBooks = async (req, res) => {
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
 
-    res.json({
-      books,
-      total,
-      page: parseInt(page),
-      pages: Math.ceil(total / limit),
-    });
+    res.json({ books, total, page: parseInt(page), pages: Math.ceil(total / limit) });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -65,16 +59,26 @@ const addBook = async (req, res) => {
     const bookData = {
       title, author, isbn, category, description,
       totalCopies: parseInt(totalCopies) || 1,
-      publisher, publishedYear: publishedYear ? parseInt(publishedYear) : null,
+      publisher,
+      publishedYear: publishedYear ? parseInt(publishedYear) : null,
       language,
     };
 
+    // Upload files to Cloudinary if provided
     if (req.files) {
       if (req.files.coverImage) {
-        bookData.coverImage = `/uploads/covers/${req.files.coverImage[0].filename}`;
+        bookData.coverImage = await uploadToCloudinary(
+          req.files.coverImage[0].buffer,
+          'libravault/covers',
+          'image'
+        );
       }
       if (req.files.pdfFile) {
-        bookData.pdfFile = `/uploads/pdfs/${req.files.pdfFile[0].filename}`;
+        bookData.pdfFile = await uploadToCloudinary(
+          req.files.pdfFile[0].buffer,
+          'libravault/pdfs',
+          'raw'
+        );
       }
     }
 
@@ -98,22 +102,21 @@ const updateBook = async (req, res) => {
       totalCopies, publisher, publishedYear, language,
     } = req.body;
 
-    // Handle file updates
+    // Upload new files to Cloudinary if provided
     if (req.files) {
       if (req.files.coverImage) {
-        // Delete old cover if exists
-        if (book.coverImage) {
-          const oldPath = path.join(__dirname, '..', book.coverImage);
-          if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-        }
-        book.coverImage = `/uploads/covers/${req.files.coverImage[0].filename}`;
+        book.coverImage = await uploadToCloudinary(
+          req.files.coverImage[0].buffer,
+          'libravault/covers',
+          'image'
+        );
       }
       if (req.files.pdfFile) {
-        if (book.pdfFile) {
-          const oldPath = path.join(__dirname, '..', book.pdfFile);
-          if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-        }
-        book.pdfFile = `/uploads/pdfs/${req.files.pdfFile[0].filename}`;
+        book.pdfFile = await uploadToCloudinary(
+          req.files.pdfFile[0].buffer,
+          'libravault/pdfs',
+          'raw'
+        );
       }
     }
 
@@ -146,17 +149,8 @@ const deleteBook = async (req, res) => {
   try {
     const book = await Book.findById(req.params.id);
     if (!book) return res.status(404).json({ message: 'Book not found' });
-
-    // Clean up uploaded files
-    if (book.coverImage) {
-      const coverPath = path.join(__dirname, '..', book.coverImage);
-      if (fs.existsSync(coverPath)) fs.unlinkSync(coverPath);
-    }
-    if (book.pdfFile) {
-      const pdfPath = path.join(__dirname, '..', book.pdfFile);
-      if (fs.existsSync(pdfPath)) fs.unlinkSync(pdfPath);
-    }
-
+    // Cloudinary files are not deleted here to keep things simple
+    // (can be extended with cloudinary.uploader.destroy using stored public_id)
     await book.deleteOne();
     res.json({ message: 'Book deleted successfully' });
   } catch (error) {

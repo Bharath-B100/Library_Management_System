@@ -1,32 +1,16 @@
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const { v2: cloudinary } = require('cloudinary');
+const { Readable } = require('stream');
 
-// Ensure upload directories exist
-const ensureDir = (dir) => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-};
-
-ensureDir('uploads/covers');
-ensureDir('uploads/pdfs');
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    if (file.fieldname === 'coverImage') {
-      cb(null, 'uploads/covers');
-    } else if (file.fieldname === 'pdfFile') {
-      cb(null, 'uploads/pdfs');
-    } else {
-      cb(new Error('Invalid field name'), null);
-    }
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+
+// Use memory storage — files go into buffer, then we stream to Cloudinary
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   if (file.fieldname === 'coverImage') {
@@ -44,7 +28,21 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
 });
 
-module.exports = upload;
+// Helper: upload a buffer to Cloudinary and return the secure URL
+const uploadToCloudinary = (buffer, folder, resourceType = 'image') => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder, resource_type: resourceType },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result.secure_url);
+      }
+    );
+    Readable.from(buffer).pipe(stream);
+  });
+};
+
+module.exports = { upload, uploadToCloudinary };
