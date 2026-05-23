@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: libravault-backend
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ADMIN_SECRET
+        sync: false
+      - key: FINE_PER_DAY
+        value: 5
+      - key: BORROW_DAYS
+        value: 14
+      - key: NODE_ENV
+        value: production
+      - key: CLIENT_URL
+        sync: false
