@@ -32,10 +32,10 @@ const upload = multer({
 });
 
 // Helper: upload a buffer to Cloudinary and return the secure URL
-const uploadToCloudinary = (buffer, folder, resourceType = 'image') => {
+const uploadToCloudinary = (buffer, folder, resourceType = 'image', extraOptions = {}) => {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
-      { folder, resource_type: resourceType },
+      { folder, resource_type: resourceType, ...extraOptions },
       (error, result) => {
         if (error) return reject(error);
         resolve(result.secure_url);

@@ -77,7 +77,8 @@ const addBook = async (req, res) => {
         bookData.pdfFile = await uploadToCloudinary(
           req.files.pdfFile[0].buffer,
           'libravault/pdfs',
-          'raw'
+          'raw',
+          { format: 'pdf', use_filename: true, unique_filename: true }
         );
       }
     }
@@ -115,7 +116,8 @@ const updateBook = async (req, res) => {
         book.pdfFile = await uploadToCloudinary(
           req.files.pdfFile[0].buffer,
           'libravault/pdfs',
-          'raw'
+          'raw',
+          { format: 'pdf', use_filename: true, unique_filename: true }
         );
       }
     }
