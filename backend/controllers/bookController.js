@@ -22,6 +22,7 @@ const getBooks = async (req, res) => {
     }
 
     const total = await Book.countDocuments(query);
+    // pdfData is excluded automatically (select:false) — only hasPdf is returned
     const books = await Book.find(query)
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
@@ -46,6 +47,26 @@ const getBookById = async (req, res) => {
   }
 };
 
+// @desc   Serve PDF from MongoDB
+// @route  GET /api/books/:id/pdf
+// @access Private (must be logged in)
+const serveBookPdf = async (req, res) => {
+  try {
+    // Explicitly select pdfData which is hidden by default
+    const book = await Book.findById(req.params.id).select('+pdfData +pdfMimeType');
+    if (!book) return res.status(404).json({ message: 'Book not found' });
+    if (!book.pdfData) return res.status(404).json({ message: 'No PDF available for this book' });
+
+    const safeName = book.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    res.set('Content-Type', book.pdfMimeType || 'application/pdf');
+    res.set('Content-Disposition', `inline; filename="${safeName}.pdf"`);
+    res.set('Content-Length', book.pdfData.length);
+    res.send(book.pdfData);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // @desc   Add a new book
 // @route  POST /api/books
 // @access Admin
@@ -64,23 +85,20 @@ const addBook = async (req, res) => {
       language,
     };
 
-    // Upload files to Cloudinary if provided
-    if (req.files) {
-      if (req.files.coverImage) {
-        bookData.coverImage = await uploadToCloudinary(
-          req.files.coverImage[0].buffer,
-          'libravault/covers',
-          'image'
-        );
-      }
-      if (req.files.pdfFile) {
-        bookData.pdfFile = await uploadToCloudinary(
-          req.files.pdfFile[0].buffer,
-          'libravault/pdfs',
-          'raw',
-          { format: 'pdf', use_filename: true, unique_filename: true }
-        );
-      }
+    // Cover image → Cloudinary (images are fine there)
+    if (req.files?.coverImage) {
+      bookData.coverImage = await uploadToCloudinary(
+        req.files.coverImage[0].buffer,
+        'libravault/covers',
+        'image'
+      );
+    }
+
+    // PDF → stored directly in MongoDB as Buffer
+    if (req.files?.pdfFile) {
+      bookData.pdfData = req.files.pdfFile[0].buffer;
+      bookData.pdfMimeType = req.files.pdfFile[0].mimetype;
+      bookData.hasPdf = true;
     }
 
     const book = await Book.create(bookData);
@@ -103,23 +121,20 @@ const updateBook = async (req, res) => {
       totalCopies, publisher, publishedYear, language,
     } = req.body;
 
-    // Upload new files to Cloudinary if provided
-    if (req.files) {
-      if (req.files.coverImage) {
-        book.coverImage = await uploadToCloudinary(
-          req.files.coverImage[0].buffer,
-          'libravault/covers',
-          'image'
-        );
-      }
-      if (req.files.pdfFile) {
-        book.pdfFile = await uploadToCloudinary(
-          req.files.pdfFile[0].buffer,
-          'libravault/pdfs',
-          'raw',
-          { format: 'pdf', use_filename: true, unique_filename: true }
-        );
-      }
+    // New cover image → Cloudinary
+    if (req.files?.coverImage) {
+      book.coverImage = await uploadToCloudinary(
+        req.files.coverImage[0].buffer,
+        'libravault/covers',
+        'image'
+      );
+    }
+
+    // New PDF → update in MongoDB
+    if (req.files?.pdfFile) {
+      book.pdfData = req.files.pdfFile[0].buffer;
+      book.pdfMimeType = req.files.pdfFile[0].mimetype;
+      book.hasPdf = true;
     }
 
     book.title = title || book.title;
@@ -151,8 +166,6 @@ const deleteBook = async (req, res) => {
   try {
     const book = await Book.findById(req.params.id);
     if (!book) return res.status(404).json({ message: 'Book not found' });
-    // Cloudinary files are not deleted here to keep things simple
-    // (can be extended with cloudinary.uploader.destroy using stored public_id)
     await book.deleteOne();
     res.json({ message: 'Book deleted successfully' });
   } catch (error) {
@@ -175,4 +188,4 @@ const getCategoryStats = async (req, res) => {
   }
 };
 
-module.exports = { getBooks, getBookById, addBook, updateBook, deleteBook, getCategoryStats };
+module.exports = { getBooks, getBookById, addBook, updateBook, deleteBook, getCategoryStats, serveBookPdf };

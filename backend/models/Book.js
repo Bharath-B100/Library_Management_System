@@ -46,9 +46,18 @@ const bookSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
-    pdfFile: {
+    // PDF stored as binary in MongoDB — excluded from list queries via select:false
+    pdfData: {
+      type: Buffer,
+      select: false,
+    },
+    pdfMimeType: {
       type: String,
-      default: '',
+      default: 'application/pdf',
+    },
+    hasPdf: {
+      type: Boolean,
+      default: false,
     },
     totalCopies: {
       type: Number,

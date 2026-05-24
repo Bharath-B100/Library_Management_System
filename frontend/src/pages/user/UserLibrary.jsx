@@ -1,12 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { getBooks, borrowBook } from '../../services/api';
-
-const getPdfUrl = (url) => {
-  if (!url) return null;
-  if (url.toLowerCase().endsWith('.pdf')) return url;
-  return url + '.pdf';
-};
+import { getBooks, borrowBook, getBookPdfUrl } from '../../services/api';
 
 const CATEGORIES = ['All','Fiction','Non-Fiction','Science','Technology','History','Biography','Self-Help','Mystery','Romance','Fantasy','Horror','Children','Academic','Other'];
 
@@ -143,8 +137,8 @@ export default function UserLibrary() {
             </div>
             {selected.description && <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.25rem', lineHeight: 1.6 }}>{selected.description}</p>}
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              {selected.pdfFile && (
-                <a href={getPdfUrl(selected.pdfFile)} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{ flex: 1 }}>📄 Read PDF</a>
+              {selected.hasPdf && (
+                <a href={getBookPdfUrl(selected._id)} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{ flex: 1 }}>📄 Read PDF</a>
               )}
               <button
                 className="btn btn-primary"

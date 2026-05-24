@@ -1,19 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { getBooks, addBook, updateBook, deleteBook } from '../../services/api';
+import { getBooks, addBook, updateBook, deleteBook, getBookPdfUrl } from '../../services/api';
 
 const CATEGORIES = ['Fiction','Non-Fiction','Science','Technology','History','Biography','Self-Help','Mystery','Romance','Fantasy','Horror','Children','Academic','Other'];
 const EMPTY_FORM = { title:'', author:'', isbn:'', category:'Fiction', description:'', totalCopies:1, publisher:'', publishedYear:'', language:'English' };
-
-// Ensure Cloudinary raw PDF URLs have .pdf extension so browser opens them correctly
-const getPdfUrl = (url) => {
-  if (!url) return null;
-  // Already has .pdf extension
-  if (url.toLowerCase().endsWith('.pdf')) return url;
-  // Cloudinary raw URLs: insert /fl_attachment:false and add .pdf
-  // e.g. .../raw/upload/v123/libravault/pdfs/abc → .../raw/upload/v123/libravault/pdfs/abc.pdf
-  return url + '.pdf';
-};
 
 function BookModal({ book, onClose, onSave }) {
   const [form, setForm] = useState(book ? { ...book, totalCopies: book.totalCopies } : EMPTY_FORM);
@@ -226,8 +216,8 @@ export default function AdminBooks() {
                       </span>
                     </td>
                     <td>
-                      {book.pdfFile
-                        ? <a href={getPdfUrl(book.pdfFile)} target="_blank" rel="noreferrer" className="btn btn-sm btn-secondary">📄 View</a>
+                      {book.hasPdf
+                        ? <a href={getBookPdfUrl(book._id)} target="_blank" rel="noreferrer" className="btn btn-sm btn-secondary">📄 View</a>
                         : <span style={{ color: 'var(--text-muted)' }}>—</span>
                       }
                     </td>

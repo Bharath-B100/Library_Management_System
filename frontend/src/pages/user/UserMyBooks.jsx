@@ -1,13 +1,6 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { getMyHistory, returnBook } from '../../services/api';
-
-const getPdfUrl = (url) => {
-  if (!url) return null;
-  if (url.toLowerCase().endsWith('.pdf')) return url;
-  return url + '.pdf';
-};
-
+import { getMyHistory, returnBook, getBookPdfUrl } from '../../services/api';
 
 export default function UserMyBooks() {
   const [records, setRecords] = useState([]);
@@ -86,8 +79,8 @@ export default function UserMyBooks() {
                     <div className="fine-tag" style={{ marginBottom: '0.75rem' }}>💸 Projected fine: ₹{projectedFine}</div>
                   )}
                   <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                    {r.book?.pdfFile && (
-                      <a href={getPdfUrl(r.book.pdfFile)} target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm">📄 Read PDF</a>
+                    {r.book?.hasPdf && (
+                      <a href={getBookPdfUrl(r.book._id)} target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm">📄 Read PDF</a>
                     )}
                     <button className="btn btn-success btn-sm" disabled={returning === r._id} onClick={() => handleReturn(r)}>
                       {returning === r._id ? '⏳ Processing...' : '↩️ Return Book'}
