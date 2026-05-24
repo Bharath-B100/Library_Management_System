@@ -14,7 +14,24 @@ const app = express();
 // Security & CORS
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const allowed = [
+      'http://localhost:5173',
+      'http://localhost:3000',
+    ];
+    if (process.env.CLIENT_URL) allowed.push(process.env.CLIENT_URL);
+    
+    const isAllowed = allowed.includes(origin) || 
+                      origin.endsWith('.vercel.app') || 
+                      origin.includes('localhost');
+                      
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 app.use(morgan('dev'));
