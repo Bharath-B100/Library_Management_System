@@ -3,8 +3,12 @@ import axios from 'axios';
 const API_URL = import.meta.env.VITE_API_URL || '';
 const BASE = `${API_URL}/api`;
 
-// Returns the URL to stream a book's PDF from the backend
-export const getBookPdfUrl = (bookId) => `${BASE}/books/${bookId}/pdf`;
+// Returns the authenticated URL to stream a book's PDF from the backend
+export const getBookPdfUrl = (bookId) => {
+  const stored = localStorage.getItem('lms_user');
+  const token = stored ? JSON.parse(stored).token : '';
+  return `${BASE}/books/${bookId}/pdf?token=${token}`;
+};
 
 // ---- AUTH ----
 export const registerUser = (data) => axios.post(`${BASE}/auth/register`, data);
